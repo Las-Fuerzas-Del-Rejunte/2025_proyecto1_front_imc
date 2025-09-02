@@ -1,6 +1,4 @@
-```bash
-Este proyecto fue realizado por los siguientes integrantes:
-```
+## Este proyecto fue realizado por los siguientes integrantes:
 
 | Nombre Completo               | Legajo | Email                          |
 |------------------------------|--------|--------------------------------|
