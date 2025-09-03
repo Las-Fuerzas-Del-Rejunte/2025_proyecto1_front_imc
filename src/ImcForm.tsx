@@ -1,5 +1,7 @@
 import axios from "axios";
 import React, { useState } from "react";
+import GaugeComponent from "react-gauge-component";
+
 
 interface ImcResult {
   imc: number;
@@ -71,6 +73,24 @@ function ImcForm() {
           <div>
             <p>IMC: {resultado.imc.toFixed(2)}</p>
             <p>Categoría: {resultado.categoria}</p>
+
+            {/* Gauge de IMC */}
+            <GaugeComponent
+              value={resultado.imc}
+              minValue={10}
+              maxValue={40}
+              arc={{
+                subArcs: [
+                  { limit: 18.5, color: "#4fc3f7" },
+                  { limit: 25, color: "#81c784" },
+                  { limit: 30, color: "#ffd54f" },
+                  { limit: 40, color: "#e57373" },
+                ],
+              }}
+              labels={{
+                valueLabel: { formatTextValue: (v) => v.toFixed(1) },
+              }}
+            />
           </div>
         )}
 
