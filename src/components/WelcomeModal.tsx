@@ -1,4 +1,3 @@
-import React from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { HeartPulse, Ruler, Weight, TrendingUp, X } from "lucide-react";
