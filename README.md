@@ -10,6 +10,48 @@
 | Host, Efraín                 | NN     | hostefrain@gmail.com           |
 | Magnano, Nicolás Mauricio    | 14654  | nicomagnano12@gmail.com        |
 | Piermarini, Matías Exequiel | 14242  | matiaspiermarini45@gmail.com   |
-# React + TypeScript + Vite
 
+Proyecto Calculadora IMC con **React**, **TypeScript** y **Vite**.
+---
 
+## 🚀 Requisitos
+- **Node.js** >= 18.x  
+- **npm** (se asume npm para comandos; si usás Yarn, los equivalentes funcionan igual)
+---
+## 📦 Instalación
+```bash
+# Instalar dependencias
+npm i
+```
+```bash
+# Levantar servidor de desarrollo
+npm run dev
+
+```
+```bash
+# Construir versión de producción en /dist
+npm run build
+
+```
+```bash
+# Previsualizar el build producido
+npm run preview
+
+```
+## 🔐 Variables de entorno
+- .env.development → configuración local
+- .env.production → configuración de producción
+
+## 🗒️ Test
+```bash
+# Ejecutar tests
+npm test
+```
+```bash
+# Modo watch
+npm test -- --watch
+```
+```bash
+# Modo verbose
+npm test -- --verbose
+```
