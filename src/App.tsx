@@ -1,13 +1,18 @@
 
 import ImcForm from './ImcForm'
+import Navbar from './components/Navbar'
+import React from 'react'
+import WelcomeModal from './components/WelcomeModal'
+import Footer from './components/Footer'
 
 function App() {
-
+  const [open, setOpen] = React.useState(true)
   return (
     <>
-     <div>
+      <Navbar onOpenInfo={() => setOpen(true)} />
       <ImcForm />
-    </div>
+      <Footer />
+      <WelcomeModal open={open} onOpenChange={setOpen} />
     </>
   )
 }
