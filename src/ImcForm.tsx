@@ -13,8 +13,12 @@ interface ImcResult {
   imc: number;
   categoria: string;
 }
-const rawApiUrl = import.meta.env.VITE_API_URL as string | undefined;
-const API_URL = (rawApiUrl ?? "").replace(/\/+$/, "");
+
+//esto se encuentra comentado para poder realizar los test, de igual manera al menos en localhost funciona con normalidad
+
+// const rawApiUrl = import.meta.env.VITE_API_URL as string | undefined;
+// const API_URL = (rawApiUrl ?? "").replace(/\/+$/, "");
+import { API_URL } from "..//config";
 
 function ImcForm() {
   const [altura, setAltura] = useState("");
