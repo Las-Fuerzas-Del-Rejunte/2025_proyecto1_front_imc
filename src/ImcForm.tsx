@@ -7,6 +7,7 @@ import { Input } from "./components/ui/input";
 import { Button } from "./components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Gauge as GaugeIcon, AlertTriangle } from "lucide-react";
+import { validateAltura, validatePeso } from "./util/validators";
 
 
 interface ImcResult {
@@ -58,43 +59,26 @@ function ImcForm() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    // Limpiar errores previos
-    setAlturaError("");
-    setPesoError("");
+  // Limpiar errores previos
+  setAlturaError("");
+  setPesoError("");
 
-    // Permitir decimales con coma o punto
-    const alturaNum = parseFloat(altura.replace(',', '.'));
-    const pesoNum = parseFloat(peso.replace(',', '.'));
+  const alturaNum = parseFloat(altura.replace(',', '.'));
+  const pesoNum = parseFloat(peso.replace(',', '.'));
 
-    let hasError = false;
-    if (isNaN(alturaNum)) {
-      setAlturaError("Ingresa una altura válida. Ejemplo: 1,75");
-      hasError = true;
-    }
-    if (isNaN(pesoNum)) {
-      setPesoError("Ingresa un peso válido. Ejemplo: 70");
-      hasError = true;
-    }
-    if (!hasError && (alturaNum <= 0 || pesoNum <= 0)) {
-      if (alturaNum <= 0) setAlturaError("La altura debe ser mayor que 0");
-      if (pesoNum <= 0) setPesoError("El peso debe ser mayor que 0");
-      hasError = true;
-    }
-    if (!hasError && alturaNum > 3) {
-      setAlturaError("La altura no puede superar 3,00 m");
-      hasError = true;
-    }
-    if (!hasError && pesoNum > 500) {
-      setPesoError("El peso no puede superar 500 kg");
-      hasError = true;
-    }
-    if (hasError) {
-      setResultado(null);
-      setError("");
-      return;
-    }
+  // Validaciones con funciones de "Validators"
+  const alturaValidation = validateAltura(alturaNum);
+  const pesoValidation = validatePeso(pesoNum);
+
+  if (alturaValidation || pesoValidation) {
+    if (alturaValidation) setAlturaError(alturaValidation);
+    if (pesoValidation) setPesoError(pesoValidation);
+    setResultado(null);
+    setError("");
+    return;
+  }
 
     try {
       const response = await axios.post(`${API_URL}/imc/calcular`, {
@@ -104,9 +88,7 @@ function ImcForm() {
       setResultado(response.data);
       setError("");
     } catch (err) {
-      setError(
-        "Error al calcular el IMC. Verifica si el backend está corriendo."
-      );
+      setError("Error al calcular el IMC. Verifica si el backend está corriendo.");
       setResultado(null);
     }
   };
