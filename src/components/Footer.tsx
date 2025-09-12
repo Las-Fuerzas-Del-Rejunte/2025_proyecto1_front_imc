@@ -1,4 +1,3 @@
-import React from "react";
 import { Users, Calendar, University } from "lucide-react";
 
 function Footer() {

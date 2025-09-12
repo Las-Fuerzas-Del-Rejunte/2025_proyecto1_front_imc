@@ -11,8 +11,12 @@ import { validateAltura, validatePeso } from "./util/validators";
 
 
 interface ImcResult {
-  imc: number;
+  id: number;
+  peso: number;
+  altura: number;
+  resultado: number;
   categoria: string;
+  createdAt: string;
 }
 
 //esto se encuentra comentado para poder realizar los test, de igual manera al menos en localhost funciona con normalidad
@@ -33,14 +37,14 @@ function ImcForm() {
   const limitToTwoDecimals = (value: string): string => {
     // Permitir coma o punto como separador decimal
     const normalizedValue = value.replace(',', '.');
-    
+
     // Validar con regex: número opcional con hasta 2 decimales
     const regex = /^\d*\.?\d{0,2}$/;
-    
+
     if (regex.test(normalizedValue)) {
       return value; // Mantener el formato original (coma o punto)
     }
-    
+
     // Si no cumple, recortar a 2 decimales
     const match = normalizedValue.match(/^(\d*\.?\d{0,2})/);
     return match ? match[1].replace('.', value.includes(',') ? ',' : '.') : value;
@@ -59,26 +63,26 @@ function ImcForm() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  // Limpiar errores previos
-  setAlturaError("");
-  setPesoError("");
+    // Limpiar errores previos
+    setAlturaError("");
+    setPesoError("");
 
-  const alturaNum = parseFloat(altura.replace(',', '.'));
-  const pesoNum = parseFloat(peso.replace(',', '.'));
+    const alturaNum = parseFloat(altura.replace(',', '.'));
+    const pesoNum = parseFloat(peso.replace(',', '.'));
 
-  // Validaciones con funciones de "Validators"
-  const alturaValidation = validateAltura(alturaNum);
-  const pesoValidation = validatePeso(pesoNum);
+    // Validaciones con funciones de "Validators"
+    const alturaValidation = validateAltura(alturaNum);
+    const pesoValidation = validatePeso(pesoNum);
 
-  if (alturaValidation || pesoValidation) {
-    if (alturaValidation) setAlturaError(alturaValidation);
-    if (pesoValidation) setPesoError(pesoValidation);
-    setResultado(null);
-    setError("");
-    return;
-  }
+    if (alturaValidation || pesoValidation) {
+      if (alturaValidation) setAlturaError(alturaValidation);
+      if (pesoValidation) setPesoError(pesoValidation);
+      setResultado(null);
+      setError("");
+      return;
+    }
 
     try {
       const response = await axios.post(`${API_URL}/imc/calcular`, {
@@ -171,32 +175,38 @@ function ImcForm() {
             <div className="flex h-[280px] md:h-[320px] lg:h-[340px] flex-col items-center justify-start">
               {resultado ? (
                 <>
-                  <div className="text-base mb-2 text-center">Categoría: <span className="font-semibold">{resultado.categoria}</span></div>
+                  <div className="text-base mb-2 text-center">
+                    Categoría: <span className="font-semibold">{resultado.categoria}</span>
+                  </div>
+                  <div className="text-sm mb-2 text-center">
+                    Peso: <span className="font-medium">{resultado.peso} kg</span> |
+                    Altura: <span className="font-medium">{resultado.altura} m</span>
+                  </div>
                   <div className="w-full max-w-xl flex-1 -mt-2 overflow-visible">
                     <div className="h-full w-full" style={{ transform: 'translateY(-4%) scale(0.92)', transformOrigin: '50% 0%' }}>
                       <GaugeComponent
-                      value={resultado.imc}
-                      minValue={10}
-                      maxValue={40}
-                      style={{ width: '100%', height: '100%' }}
-                      arc={{
-                        width: 0.22,
-                        cornerRadius: 5,
-                        padding: 0.01,
-                        subArcs: [
-                          { limit: 18.5, color: "#06b6d4" },
-                          { limit: 25, color: "#10b981" },
-                          { limit: 30, color: "#f59e0b" },
-                          { limit: 40, color: "#ef4444" },
-                        ],
-                      }}
-                      pointer={{ color: '#a78bfa', length: 0.55, width: 8 }}
-                      labels={{
-                        valueLabel: {
-                          formatTextValue: (v) => `IMC: ${Number(v).toFixed(2)}`,
-                          style: { fill: '#e5e7eb', fontSize: '30px', fontWeight: 800 },
-                        },
-                      }}
+                        value={resultado.resultado}
+                        minValue={10}
+                        maxValue={40}
+                        style={{ width: '100%', height: '100%' }}
+                        arc={{
+                          width: 0.22,
+                          cornerRadius: 5,
+                          padding: 0.01,
+                          subArcs: [
+                            { limit: 18.5, color: "#06b6d4" },
+                            { limit: 25, color: "#10b981" },
+                            { limit: 30, color: "#f59e0b" },
+                            { limit: 40, color: "#ef4444" },
+                          ],
+                        }}
+                        pointer={{ color: '#a78bfa', length: 0.55, width: 8 }}
+                        labels={{
+                          valueLabel: {
+                            formatTextValue: (v) => `IMC: ${Number(v).toFixed(2)}`,
+                            style: { fill: '#e5e7eb', fontSize: '30px', fontWeight: 800 },
+                          },
+                        }}
                       />
                     </div>
                   </div>
