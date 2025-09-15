@@ -1,0 +1,155 @@
+import { render, screen, fireEvent, act } from "@testing-library/react";
+import "@testing-library/jest-dom";
+import ImcForm from "../ImcForm";
+import axios from "axios";
+
+// Mock del Gauge (gráfico del IMC) para que no rompa los tests
+// jest.mock("react-gauge-component", () => () => <div data-testid="gauge-mock" />);
+
+
+jest.mock("react-gauge-component", () => ({
+  default: () => <div data-testid="gauge-mock" />
+}));
+
+
+// Mock de la configuración de la API
+jest.mock("../../config", () => ({
+  API_URL: "http://localhost:3000",
+}));
+
+// Mock de Axios para simular llamadas HTTP sin tocar la API real
+jest.mock("axios");
+const mockedAxios = axios as jest.Mocked<typeof axios>;
+
+// Tipo para los registros del historial
+interface HistorialItem {
+  id: number;
+  peso: number;
+  altura: number;
+  resultado: number;
+  categoria: string;
+  createdAt: string;
+}
+
+// Helper para abrir el modal del historial y mockear datos
+const abrirModal = async (historialMock: HistorialItem[]) => {
+  mockedAxios.get.mockResolvedValueOnce({ data: historialMock });
+  render(<ImcForm />);
+  await act(async () => {
+    fireEvent.click(screen.getByTestId("btn-ver-historial"));
+  });
+};
+
+describe("ImcForm - integración", () => {
+  // Limpiamos todos los mocks antes de cada test
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  // Manejo de error de backend
+  it("maneja error de backend", async () => {
+    mockedAxios.post.mockRejectedValueOnce(new Error("Network error"));
+    render(<ImcForm />);
+
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/Altura/i), { target: { value: "1.80" } });
+      fireEvent.change(screen.getByLabelText(/Peso/i), { target: { value: "80" } });
+      fireEvent.click(screen.getByRole("button", { name: /Calcular/i }));
+    });
+
+    expect(await screen.findByText(/Error al calcular el IMC/i)).toBeInTheDocument();
+  });
+
+  // cálculo exitoso que debería mostrarse en el gauge
+  it("muestra el Gauge con resultado si el cálculo es exitoso", async () => {
+    mockedAxios.post.mockResolvedValueOnce({ data: { resultado: 24.5, categoria: "Normal" } });
+    render(<ImcForm />);
+
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/Altura/i), { target: { value: "1.75" } });
+      fireEvent.change(screen.getByLabelText(/Peso/i), { target: { value: "70" } });
+      fireEvent.click(screen.getByRole("button", { name: /Calcular/i }));
+    });
+
+    expect(await screen.findByTestId("gauge-mock")).toBeInTheDocument();
+    expect(await screen.findByText(/Normal/i)).toBeInTheDocument();
+  });
+
+  // Historial de cálculos
+  describe("Historial de cálculos", () => {
+    //prueba sobre la carga de historial
+    it("carga historial correctamente", async () => {
+      const historialMock: HistorialItem[] = [
+        { id: 1, peso: 70, altura: 1.75, resultado: 24.5, categoria: "Normal", createdAt: "2025-09-15T12:00:00Z" },
+      ];
+
+      await abrirModal(historialMock);
+
+      expect(await screen.findByText(/Normal/i)).toBeInTheDocument();
+      expect(await screen.findByText(/70/i)).toBeInTheDocument();
+    });
+
+    //prueba para verificar el ordenamiento de historial por peso
+    it("ordena historial por peso", async () => {
+      const historialMock: HistorialItem[] = [
+        { id: 1, peso: 80, altura: 1.80, resultado: 24.7, categoria: "Normal", createdAt: "2025-09-15T12:00:00Z" },
+        { id: 2, peso: 60, altura: 1.70, resultado: 20.8, categoria: "Normal", createdAt: "2025-09-14T12:00:00Z" },
+      ];
+
+      await abrirModal(historialMock);
+
+      expect(await screen.findByText("80")).toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId("btn-ordenar-peso"));
+      });
+
+      expect(screen.getAllByText(/Normal/i).length).toBe(2);
+    });
+
+    //prueba de paginación si hay muchos registros en el historial
+    it("muestra botones de paginación si hay muchos registros", async () => {
+      const registros: HistorialItem[] = Array.from({ length: 12 }, (_, i) => ({
+        id: i,
+        peso: 60 + i,
+        altura: 1.70,
+        resultado: 20 + i,
+        categoria: "Normal",
+        createdAt: "2025-09-15T12:00:00Z",
+      }));
+
+      await abrirModal(registros);
+
+      expect(await screen.findByText("60")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Siguiente/i })).toBeInTheDocument();
+    });
+
+    //Limpieza del rango de fechas
+    it("limpia el rango de fechas al hacer click en Limpiar", async () => {
+      await abrirModal([]);
+
+      const limpiarBtn = await screen.getByTestId("btn-limpiar");
+      await act(async () => {
+        fireEvent.click(limpiarBtn);
+      });
+
+      expect(await screen.findByText(/Sin registros/i)).toBeInTheDocument();
+    });
+
+    //prueba de filtrado por fechas usando botón "Filtrar"
+    it("filtra el historial al hacer click en Filtrar", async () => {
+      const historialMock: HistorialItem[] = [
+        { id: 1, peso: 70, altura: 1.75, resultado: 24.5, categoria: "Normal", createdAt: "2025-09-15T12:00:00Z" },
+      ];
+
+      await abrirModal(historialMock);
+
+      const filtrarBtn = await screen.getByTestId("btn-filtrar");
+      await act(async () => {
+        fireEvent.click(filtrarBtn);
+      });
+
+      expect(await screen.findByText(/Normal/i)).toBeInTheDocument();
+    });
+  });
+});

@@ -186,7 +186,7 @@ function ImcForm() {
               <CardTitle>Calculadora de IMC</CardTitle>
               <CardDescription>Ingresa tu altura y peso para calcular tu índice de masa corporal.</CardDescription>
             </div>
-            <Button onClick={() => setHistoryOpen(true)} className="h-10 text-sm text-white">Ver historial</Button>
+            <Button data-testid="btn-ver-historial" onClick={() => setHistoryOpen(true)} className="h-10 text-sm text-white">Ver historial</Button>
           </div>
         </CardHeader>
         <CardContent className="h-full">
@@ -355,8 +355,9 @@ function ImcForm() {
                 </PopoverContent>
               </Popover>
             </div>
-            <Button type="submit" className="h-10 sm:h-9 px-4 text-white">Filtrar</Button>
+            <Button data-testid="btn-filtrar" type="submit" className="h-10 sm:h-9 px-4 text-white">Filtrar</Button>
             <Button
+              data-testid="btn-limpiar"
               type="button"
               variant="secondary"
               className="h-10 sm:h-9 px-4"
@@ -381,6 +382,7 @@ function ImcForm() {
                     <th className="px-3 py-2 text-left font-medium">Fecha</th>
                     <th className="px-3 py-2 text-left font-medium">
                       <button
+                        data-testid="btn-ordenar-peso"
                         type="button"
                         className="inline-flex items-center gap-1 hover:opacity-80"
                         onClick={() => {
