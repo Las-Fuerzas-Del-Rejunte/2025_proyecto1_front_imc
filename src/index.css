@@ -52,3 +52,22 @@
   * { @apply border-border; }
   body { @apply bg-background text-foreground font-sans; }
 }
+
+/* Quitar círculo/outline azul de react-day-picker */
+.shc-calendar .rdp-day,
+.shc-calendar .rdp-button_reset,
+.shc-calendar .rdp-day_button {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+.shc-calendar .rdp-day:hover {
+  border: none !important;
+  box-shadow: none !important;
+  background-color: rgba(139,92,246,0.20) !important; /* violet-500/20 */
+}
+
+/* Hover filas de tabla (modal historial) */
+.historial-table-row:hover td {
+  background-color: rgba(139,92,246,0.20);
+}

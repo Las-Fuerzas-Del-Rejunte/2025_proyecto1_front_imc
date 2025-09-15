@@ -5,6 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./com
 import { Label } from "./components/ui/label";
 import { Input } from "./components/ui/input";
 import { Button } from "./components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "./components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "./components/ui/popover";
+import { Calendar } from "./components/ui/calendar";
+import type { DateRange } from "react-day-picker";
+import { Calendar as CalendarIcon, X, ArrowUpDown } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Gauge as GaugeIcon, AlertTriangle } from "lucide-react";
 import { validateAltura, validatePeso } from "./util/validators";
@@ -43,6 +48,10 @@ function ImcForm() {
   const [fechaHasta, setFechaHasta] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const registrosPorPagina = 10;
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [range, setRange] = useState<DateRange | undefined>(undefined);
+  const [sortKey, setSortKey] = useState<"peso" | "altura" | "resultado" | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   // Función para limitar a 2 decimales
   const limitToTwoDecimals = (value: string): string => {
@@ -131,6 +140,14 @@ function ImcForm() {
     fetchHistorial();
   }, [fechaDesde, fechaHasta]);
 
+  useEffect(() => {
+    if (historyOpen) {
+      const from = fechaDesdeInput ? new Date(fechaDesdeInput) : undefined;
+      const to = fechaHastaInput ? new Date(fechaHastaInput) : undefined;
+      setRange({ from, to });
+    }
+  }, [historyOpen]);
+
   // Filtrado y paginación de registros
   const registrosFiltrados = (() => {
     let registros = historial;
@@ -140,6 +157,15 @@ function ImcForm() {
         const desdeOk = fechaDesde ? fechaItem >= fechaDesde : true;
         const hastaOk = fechaHasta ? fechaItem <= fechaHasta : true;
         return desdeOk && hastaOk;
+      });
+    }
+    if (sortKey) {
+      const dir = sortDir === "asc" ? 1 : -1;
+      registros = [...registros].sort((a, b) => {
+        const av = a[sortKey] as number;
+        const bv = b[sortKey] as number;
+        if (av === bv) return 0;
+        return av > bv ? dir : -dir;
       });
     }
     return registros;
@@ -155,11 +181,16 @@ function ImcForm() {
     <div className="container mx-auto max-w-5xl p-4 h-full">
       <Card className="w-full h-full">
         <CardHeader>
-          <CardTitle>Calculadora de IMC</CardTitle>
-          <CardDescription>Ingresa tu altura y peso para calcular tu índice de masa corporal.</CardDescription>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle>Calculadora de IMC</CardTitle>
+              <CardDescription>Ingresa tu altura y peso para calcular tu índice de masa corporal.</CardDescription>
+            </div>
+            <Button onClick={() => setHistoryOpen(true)} className="h-10 text-sm text-white">Ver historial</Button>
+          </div>
         </CardHeader>
         <CardContent className="h-full">
-          <div className="grid gap-6 md:grid-cols-[1fr_1fr_2.5fr] items-stretch min-h-[350px] h-full">
+          <div className="grid gap-6 md:grid-cols-[1fr_1fr] items-stretch min-h-[350px] h-full">
             {/* Columna 1: Formulario */}
             <form onSubmit={handleSubmit} className="flex flex-col space-y-4 w-full min-w-[120px]">
               <div className="space-y-2">
@@ -210,7 +241,7 @@ function ImcForm() {
                   </div>
                 )}
               </div>
-              <Button type="submit" className="w-full text-base h-11">Calcular</Button>
+              <Button type="submit" className="w-full text-base h-11 text-white">Calcular</Button>
 
               {error && (
                 <Alert className="border-destructive/50 bg-destructive/10">
@@ -268,92 +299,174 @@ function ImcForm() {
               )}
             </div>
 
-            {/* Columna 3: Historial */}
-            <div className="flex flex-col w-full h-full mt-0">
-              <h3 className="text-lg font-semibold mb-2 text-center">Historial de cálculos</h3>
-              <form
-                className="flex gap-2 mb-2 justify-center items-center"
-                onSubmit={e => {
-                  e.preventDefault();
-                  setFechaDesde(fechaDesdeInput);
-                  setFechaHasta(fechaHastaInput);
-                  setCurrentPage(1); // <-- reinicia la paginación
-                }}
-              >
-                <input
-                  type="date"
-                  value={fechaDesdeInput}
-                  onChange={e => setFechaDesdeInput(e.target.value)}
-                  className="border rounded px-2 py-1 text-sm bg-white text-black"
-                  placeholder="Desde"
-                />
-                <input
-                  type="date"
-                  value={fechaHastaInput}
-                  onChange={e => setFechaHastaInput(e.target.value)}
-                  className="border rounded px-2 py-1 text-sm bg-white text-black"
-                  placeholder="Hasta"
-                />
-                <Button type="submit" className="text-xs h-8 px-3">Filtrar</Button>
-              </form>
-              <div className="overflow-auto flex-1 mt-4">
-                <table className="min-w-full text-xs border rounded">
-                  <thead>
-                    <tr className="bg-muted">
-                      <th className="px-2 py-1">Fecha</th>
-                      <th className="px-2 py-1">Peso (kg)</th>
-                      <th className="px-2 py-1">Altura (m)</th>
-                      <th className="px-2 py-1">IMC</th>
-                      <th className="px-2 py-1">Categoría</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {registrosPagina.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="text-center py-2 text-muted-foreground">
-                          Sin registros
-                        </td>
-                      </tr>
-                    ) : (
-                      registrosPagina.map(item => (
-                        <tr key={item.id} className="border-b">
-                          <td className="px-2 py-1 text-center truncate min-w-[120px]">{new Date(item.createdAt).toLocaleDateString()}</td>
-                          <td className="px-2 py-1 text-center truncate min-w-[80px]">{item.peso}</td>
-                          <td className="px-2 py-1 text-center truncate min-w-[80px]">{item.altura}</td>
-                          <td className="px-2 py-1 text-center truncate min-w-[80px]">{item.resultado.toFixed(2)}</td>
-                          <td className="px-2 py-1 text-center truncate min-w-[100px]">{item.categoria}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                  {/* Paginación */}
-                  <tfoot>
-                    <tr>
-                      <td colSpan={5} className="py-2 text-center">
-                        <Button
-                          disabled={currentPage === 1}
-                          onClick={() => setCurrentPage(currentPage - 1)}
-                          className="mx-1 px-2 py-1 text-xs"
-                        >
-                          Anterior
-                        </Button>
-                        <span className="mx-2 text-sm">{currentPage} / {totalPaginas || 1}</span>
-                        <Button
-                          disabled={currentPage === totalPaginas || totalPaginas === 0}
-                          onClick={() => setCurrentPage(currentPage + 1)}
-                          className="mx-1 px-2 py-1 text-xs"
-                        >
-                          Siguiente
-                        </Button>
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+            {/* Botón adicional para abrir historial en pantallas pequeñas */}
+            <div className="flex items-center justify-center md:justify-end">
+              <Button onClick={() => setHistoryOpen(true)} className="md:hidden w-full">Ver historial</Button>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal de historial */}
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Historial de cálculos</DialogTitle>
+              <DialogClose asChild>
+                <button aria-label="Cerrar" className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted/50">
+                  <X size={16} />
+                </button>
+              </DialogClose>
+            </div>
+          </DialogHeader>
+
+          <form
+            className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2 mb-4 items-end"
+            onSubmit={e => {
+              e.preventDefault();
+              setFechaDesde(fechaDesdeInput);
+              setFechaHasta(fechaHastaInput);
+              setCurrentPage(1);
+            }}
+          >
+            <div className="space-y-1">
+              <Label className="text-xs">Rango de fechas</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between hover:bg-violet-500/20">
+                    {fechaDesdeInput || fechaHastaInput
+                      ? `${fechaDesdeInput ? new Date(fechaDesdeInput).toLocaleDateString() : ""}${fechaHastaInput ? ' - ' + new Date(fechaHastaInput).toLocaleDateString() : ''}`
+                      : "dd/mm/aaaa - dd/mm/aaaa"}
+                    <CalendarIcon className="h-4 w-4 opacity-80" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0">
+                  <Calendar
+                    mode="range"
+                    numberOfMonths={2}
+                    selected={range}
+                    onSelect={(r) => {
+                      setRange(r);
+                      setFechaDesdeInput(r?.from ? r.from.toLocaleDateString('en-CA') : "");
+                      setFechaHastaInput(r?.to ? r.to.toLocaleDateString('en-CA') : "");
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <Button type="submit" className="h-10 sm:h-9 px-4 text-white">Filtrar</Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="h-10 sm:h-9 px-4"
+              onClick={() => {
+                setFechaDesdeInput("");
+                setFechaHastaInput("");
+                setFechaDesde("");
+                setFechaHasta("");
+                setRange(undefined);
+                setCurrentPage(1);
+              }}
+            >
+              Limpiar
+            </Button>
+          </form>
+
+          <div className="mt-2 overflow-auto max-h-[60vh]">
+            <div className="overflow-hidden rounded-md border">
+              <table className="min-w-full text-sm">
+                <thead className="bg-muted sticky top-0 z-10">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-medium">Fecha</th>
+                    <th className="px-3 py-2 text-left font-medium">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 hover:opacity-80"
+                        onClick={() => {
+                          setSortKey("peso");
+                          setSortDir(prev => (sortKey === "peso" && prev === "desc") ? "asc" : "desc");
+                        }}
+                        aria-label="Ordenar por peso"
+                      >
+                        Peso (kg)
+                        <ArrowUpDown className={`h-3.5 w-3.5 ${sortKey === "peso" ? "opacity-100" : "opacity-60"}`} />
+                      </button>
+                    </th>
+                    <th className="px-3 py-2 text-left font-medium">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 hover:opacity-80"
+                        onClick={() => {
+                          setSortKey("altura");
+                          setSortDir(prev => (sortKey === "altura" && prev === "desc") ? "asc" : "desc");
+                        }}
+                        aria-label="Ordenar por altura"
+                      >
+                        Altura (m)
+                        <ArrowUpDown className={`h-3.5 w-3.5 ${sortKey === "altura" ? "opacity-100" : "opacity-60"}`} />
+                      </button>
+                    </th>
+                    <th className="px-3 py-2 text-left font-medium">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 hover:opacity-80"
+                        onClick={() => {
+                          setSortKey("resultado");
+                          setSortDir(prev => (sortKey === "resultado" && prev === "desc") ? "asc" : "desc");
+                        }}
+                        aria-label="Ordenar por IMC"
+                      >
+                        IMC
+                        <ArrowUpDown className={`h-3.5 w-3.5 ${sortKey === "resultado" ? "opacity-100" : "opacity-60"}`} />
+                      </button>
+                    </th>
+                    <th className="px-3 py-2 text-left font-medium">Categoría</th>
+                  </tr>
+                </thead>
+              <tbody>
+                {registrosPagina.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="text-center px-3 py-6 text-muted-foreground">
+                      Sin registros
+                    </td>
+                  </tr>
+                ) : (
+                  registrosPagina.map(item => (
+                    <tr key={item.id} className="border-t historial-table-row">
+                      <td className="px-3 py-2 whitespace-nowrap min-w-[120px]">{new Date(item.createdAt).toLocaleDateString()}</td>
+                      <td className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.peso}</td>
+                      <td className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.altura}</td>
+                      <td className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.resultado.toFixed(2)}</td>
+                      <td className="px-3 py-2 whitespace-nowrap min-w-[100px]">{item.categoria}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+              <tfoot></tfoot>
+            </table>
+            </div>
+          </div>
+
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <Button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(currentPage - 1)}
+              className="px-4 text-white"
+            >
+              Anterior
+            </Button>
+            <span className="text-sm">Página {currentPage} de {totalPaginas || 1}</span>
+            <Button
+              disabled={currentPage === totalPaginas || totalPaginas === 0}
+              onClick={() => setCurrentPage(currentPage + 1)}
+              className="px-4 text-white"
+            >
+              Siguiente
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
