@@ -1,5 +1,5 @@
 import axios from "axios";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import GaugeComponent from "react-gauge-component";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
 import { Label } from "./components/ui/label";
@@ -32,6 +32,17 @@ function ImcForm() {
   const [error, setError] = useState("");
   const [alturaError, setAlturaError] = useState("");
   const [pesoError, setPesoError] = useState("");
+
+  // Historial de cálculos
+  const [historial, setHistorial] = useState<ImcResult[]>([]);
+  // Filtros controlados por el usuario
+  const [fechaDesdeInput, setFechaDesdeInput] = useState("");
+  const [fechaHastaInput, setFechaHastaInput] = useState("");
+  // Filtros aplicados
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const registrosPorPagina = 10;
 
   // Función para limitar a 2 decimales
   const limitToTwoDecimals = (value: string): string => {
@@ -97,17 +108,60 @@ function ImcForm() {
     }
   };
 
+  // Obtener historial solo cuando cambian los filtros aplicados
+  useEffect(() => {
+    const fetchHistorial = async () => {
+      try {
+        let url = `${API_URL}/imc/historial`;
+        if (fechaDesde || fechaHasta) {
+          const params = [];
+          if (fechaDesde) params.push(`desde=${fechaDesde}`);
+          if (fechaHasta) params.push(`hasta=${fechaHasta}`);
+          url += "?" + params.join("&");
+        }
+        const response = await axios.get(url);
+        const ordenados = response.data.sort(
+          (a: ImcResult, b: ImcResult) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setHistorial(ordenados);
+      } catch {
+        setHistorial([]);
+      }
+    };
+    fetchHistorial();
+  }, [fechaDesde, fechaHasta]);
+
+  // Filtrado y paginación de registros
+  const registrosFiltrados = (() => {
+    let registros = historial;
+    if (fechaDesde || fechaHasta) {
+      registros = registros.filter(item => {
+        const fechaItem = new Date(item.createdAt).toLocaleDateString('en-CA'); // 'YYYY-MM-DD'
+        const desdeOk = fechaDesde ? fechaItem >= fechaDesde : true;
+        const hastaOk = fechaHasta ? fechaItem <= fechaHasta : true;
+        return desdeOk && hastaOk;
+      });
+    }
+    return registros;
+  })();
+
+  const totalPaginas = Math.ceil(registrosFiltrados.length / registrosPorPagina);
+  const registrosPagina = registrosFiltrados.slice(
+    (currentPage - 1) * registrosPorPagina,
+    currentPage * registrosPorPagina
+  );
+
   return (
-    <div className="container mx-auto max-w-5xl p-4">
-      <Card className="w-full">
+    <div className="container mx-auto max-w-5xl p-4 h-full">
+      <Card className="w-full h-full">
         <CardHeader>
           <CardTitle>Calculadora de IMC</CardTitle>
           <CardDescription>Ingresa tu altura y peso para calcular tu índice de masa corporal.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-6 md:grid-cols-2 items-stretch min-h-[240px] md:min-h-[280px] lg:min-h-[300px]">
-            {/* izquierda: formulario */}
-            <form noValidate onSubmit={handleSubmit} className="flex h-full flex-col space-y-4">
+        <CardContent className="h-full">
+          <div className="grid gap-6 md:grid-cols-[1fr_1fr_2.5fr] items-stretch min-h-[350px] h-full">
+            {/* Columna 1: Formulario */}
+            <form onSubmit={handleSubmit} className="flex flex-col space-y-4 w-full min-w-[120px]">
               <div className="space-y-2">
                 <Label htmlFor="altura">Altura (m)</Label>
                 <Input
@@ -156,7 +210,7 @@ function ImcForm() {
                   </div>
                 )}
               </div>
-              <Button type="submit" className="mt-auto w-full text-base h-11">Calcular</Button>
+              <Button type="submit" className="w-full text-base h-11">Calcular</Button>
 
               {error && (
                 <Alert className="border-destructive/50 bg-destructive/10">
@@ -171,55 +225,131 @@ function ImcForm() {
               )}
             </form>
 
-            {/* derecha: gauge */}
-            <div className="flex h-[280px] md:h-[320px] lg:h-[340px] flex-col items-center justify-start">
+            {/* Columna 2: Gauge */}
+            <div className="flex flex-col items-center justify-center w-full h-full">
               {resultado ? (
                 <>
-                  <div className="text-base mb-2 text-center">
+                  <div className="text-base mb-2 text-center w-full">
                     Categoría: <span className="font-semibold">{resultado.categoria}</span>
                   </div>
-                  <div className="text-sm mb-2 text-center">
-                    Peso: <span className="font-medium">{resultado.peso} kg</span> |
-                    Altura: <span className="font-medium">{resultado.altura} m</span>
+                  <div className="text-sm mb-2 text-center w-full">
+                    Peso: <span className="font-medium">{resultado.peso} kg</span> | Altura: <span className="font-medium">{resultado.altura} m</span>
                   </div>
-                  <div className="w-full max-w-xl flex-1 -mt-2 overflow-visible">
-                    <div className="h-full w-full" style={{ transform: 'translateY(-4%) scale(0.92)', transformOrigin: '50% 0%' }}>
-                      <GaugeComponent
-                        value={resultado.resultado}
-                        minValue={10}
-                        maxValue={40}
-                        style={{ width: '100%', height: '100%' }}
-                        arc={{
-                          width: 0.22,
-                          cornerRadius: 5,
-                          padding: 0.01,
-                          subArcs: [
-                            { limit: 18.5, color: "#06b6d4" },
-                            { limit: 25, color: "#10b981" },
-                            { limit: 30, color: "#f59e0b" },
-                            { limit: 40, color: "#ef4444" },
-                          ],
-                        }}
-                        pointer={{ color: '#a78bfa', length: 0.55, width: 8 }}
-                        labels={{
-                          valueLabel: {
-                            formatTextValue: (v) => `IMC: ${Number(v).toFixed(2)}`,
-                            style: { fill: '#e5e7eb', fontSize: '30px', fontWeight: 800 },
-                          },
-                        }}
-                      />
-                    </div>
+                  <div className="w-[340px] h-[180px] flex items-center justify-center">
+                    <GaugeComponent
+                      value={resultado.resultado}
+                      minValue={10}
+                      maxValue={40}
+                      arc={{
+                        width: 0.22,
+                        padding: 0.005,
+                        subArcs: [
+                          { limit: 18.5, color: "#60a5fa", showTick: true },
+                          { limit: 24.9, color: "#22c55e", showTick: true },
+                          { limit: 29.9, color: "#facc15", showTick: true },
+                          { limit: 40, color: "#ef4444", showTick: true },
+                        ],
+                      }}
+                      pointer={{ color: "#4b5563", length: 0.65, width: 18, type: "needle" }}
+                      labels={{
+                        valueLabel: {
+                          formatTextValue: (value) => `${value} IMC`,
+                          style: { fontSize: "1rem", fill: "#374151" },
+                        },
+                      }}
+                    />
                   </div>
                 </>
               ) : (
-                <div className="w-full max-w-xl h-full rounded-lg border border-dashed bg-card/30 p-8 text-center flex flex-col items-center justify-center">
-                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <GaugeIcon className="h-7 w-7" />
-                  </div>
-                  <h3 className="text-lg font-semibold">Aún sin resultado</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">Completa tu altura y peso y presiona "Calcular" para ver tu IMC aquí.</p>
+                <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-full">
+                  <GaugeIcon className="w-10 h-10 mb-2" />
+                  <p>Ingresa tus datos y presiona "Calcular".</p>
                 </div>
               )}
+            </div>
+
+            {/* Columna 3: Historial */}
+            <div className="flex flex-col w-full h-full mt-0">
+              <h3 className="text-lg font-semibold mb-2 text-center">Historial de cálculos</h3>
+              <form
+                className="flex gap-2 mb-2 justify-center items-center"
+                onSubmit={e => {
+                  e.preventDefault();
+                  setFechaDesde(fechaDesdeInput);
+                  setFechaHasta(fechaHastaInput);
+                  setCurrentPage(1); // <-- reinicia la paginación
+                }}
+              >
+                <input
+                  type="date"
+                  value={fechaDesdeInput}
+                  onChange={e => setFechaDesdeInput(e.target.value)}
+                  className="border rounded px-2 py-1 text-sm bg-white text-black"
+                  placeholder="Desde"
+                />
+                <input
+                  type="date"
+                  value={fechaHastaInput}
+                  onChange={e => setFechaHastaInput(e.target.value)}
+                  className="border rounded px-2 py-1 text-sm bg-white text-black"
+                  placeholder="Hasta"
+                />
+                <Button type="submit" className="text-xs h-8 px-3">Filtrar</Button>
+              </form>
+              <div className="overflow-auto flex-1 mt-4">
+                <table className="min-w-full text-xs border rounded">
+                  <thead>
+                    <tr className="bg-muted">
+                      <th className="px-2 py-1">Fecha</th>
+                      <th className="px-2 py-1">Peso (kg)</th>
+                      <th className="px-2 py-1">Altura (m)</th>
+                      <th className="px-2 py-1">IMC</th>
+                      <th className="px-2 py-1">Categoría</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {registrosPagina.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="text-center py-2 text-muted-foreground">
+                          Sin registros
+                        </td>
+                      </tr>
+                    ) : (
+                      registrosPagina.map(item => (
+                        <tr key={item.id} className="border-b">
+                          <td className="px-2 py-1 text-center truncate min-w-[120px]">{new Date(item.createdAt).toLocaleDateString()}</td>
+                          <td className="px-2 py-1 text-center truncate min-w-[80px]">{item.peso}</td>
+                          <td className="px-2 py-1 text-center truncate min-w-[80px]">{item.altura}</td>
+                          <td className="px-2 py-1 text-center truncate min-w-[80px]">{item.resultado.toFixed(2)}</td>
+                          <td className="px-2 py-1 text-center truncate min-w-[100px]">{item.categoria}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                  {/* Paginación */}
+                  <tfoot>
+                    <tr>
+                      <td colSpan={5} className="py-2 text-center">
+                        <Button
+                          disabled={currentPage === 1}
+                          onClick={() => setCurrentPage(currentPage - 1)}
+                          className="mx-1 px-2 py-1 text-xs"
+                        >
+                          Anterior
+                        </Button>
+                        <span className="mx-2 text-sm">{currentPage} / {totalPaginas || 1}</span>
+                        <Button
+                          disabled={currentPage === totalPaginas || totalPaginas === 0}
+                          onClick={() => setCurrentPage(currentPage + 1)}
+                          className="mx-1 px-2 py-1 text-xs"
+                        >
+                          Siguiente
+                        </Button>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </div>
           </div>
         </CardContent>
