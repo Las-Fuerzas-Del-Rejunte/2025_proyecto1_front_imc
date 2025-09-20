@@ -103,7 +103,7 @@ function ImcForm() {
       if (pesoValidation) setPesoError(pesoValidation);
       setResultado(null);
       setError("");
-      setLoading(false); // 🔑 RESETEA loading aunque no llames API
+      setLoading(false);
       return;
     }
 
@@ -205,7 +205,7 @@ function ImcForm() {
                 <Label htmlFor="altura">Altura (m)</Label>
                 <Input
                   id="altura"
-                  type="number"
+                  type="text"
                   inputMode="decimal"
                   value={altura}
                   onChange={handleAlturaChange}
@@ -229,7 +229,7 @@ function ImcForm() {
                 <Label htmlFor="peso">Peso (kg)</Label>
                 <Input
                   id="peso"
-                  type="number"
+                  type="text"
                   inputMode="decimal"
                   value={peso}
                   onChange={handlePesoChange}
