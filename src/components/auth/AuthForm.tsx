@@ -2,6 +2,7 @@ import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { Eye, EyeOff } from "lucide-react";
 import { useToast } from "../../hooks/use-toast";
+import { ResetPasswordForm } from "./ResetPasswordForm";
 
 export function AuthForm() {
     const [email, setEmail] = useState("");
@@ -10,7 +11,66 @@ export function AuthForm() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
+    const [showResetPassword, setShowResetPassword] = useState(false);
     const { toast } = useToast();
+
+    // Función para traducir errores de Supabase al español
+    function translateError(errorMessage: string): string {
+        const errorTranslations: { [key: string]: string } = {
+            // Errores de autenticación
+            "Invalid login credentials": "Credenciales de inicio de sesión inválidas",
+            "Email not confirmed": "Email no confirmado. Revisa tu correo electrónico",
+            "User not found": "Usuario no encontrado",
+            "Invalid email": "Dirección de email inválida",
+            "Password should be at least 6 characters": "La contraseña debe tener al menos 6 caracteres",
+            "Password should be at least 6 characters long": "La contraseña debe tener al menos 6 caracteres",
+            "Unable to validate email address: invalid format": "Formato de email inválido",
+            "User already registered": "Este email ya está registrado",
+            "Signup requires a valid password": "Se requiere una contraseña válida para registrarse",
+            
+            // Errores de red/conexión
+            "Failed to fetch": "Error de conexión. Verifica tu internet",
+            "Network request failed": "Error de red. Intenta nuevamente",
+            "Request timeout": "Tiempo de espera agotado. Intenta nuevamente",
+            
+            // Errores de OAuth
+            "OAuth provider error": "Error con el proveedor de autenticación",
+            "OAuth account not linked": "Cuenta de OAuth no vinculada",
+            
+            // Errores generales
+            "An unexpected error occurred": "Ocurrió un error inesperado",
+            "Too many requests": "Demasiados intentos. Espera un momento",
+            "Service unavailable": "Servicio no disponible. Intenta más tarde"
+        };
+
+        // Buscar traducción exacta
+        if (errorTranslations[errorMessage]) {
+            return errorTranslations[errorMessage];
+        }
+
+        // Buscar traducciones parciales para errores dinámicos
+        if (errorMessage.includes("Invalid login credentials")) {
+            return "Credenciales de inicio de sesión inválidas";
+        }
+        if (errorMessage.includes("Email not confirmed")) {
+            return "Email no confirmado. Revisa tu correo electrónico";
+        }
+        if (errorMessage.includes("User already registered")) {
+            return "Este email ya está registrado";
+        }
+        if (errorMessage.includes("Password should be at least")) {
+            return "La contraseña debe tener al menos 6 caracteres";
+        }
+        if (errorMessage.includes("Invalid email")) {
+            return "Formato de email inválido";
+        }
+        if (errorMessage.includes("Failed to fetch") || errorMessage.includes("Network")) {
+            return "Error de conexión. Verifica tu internet e intenta nuevamente";
+        }
+
+        // Si no se encuentra traducción, devolver mensaje genérico
+        return "Ocurrió un error. Intenta nuevamente";
+    }
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -21,10 +81,18 @@ export function AuthForm() {
             if (mode === "signup") {
                 const { error } = await supabase.auth.signUp({ email, password });
                 if (error) throw error;
+                
+                // Cambiar al modo login después del registro exitoso
+                setMode("login");
+                // Limpiar el formulario
+                setEmail("");
+                setPassword("");
+                
                 toast({
                     title: "Cuenta creada exitosamente",
                     description: "Revisa tu correo para confirmar tu cuenta.",
                     variant: "success",
+                    duration: 6000, // 6 segundos para dar más tiempo de leer
                 });
             } else {
                 const { data, error } = await supabase.auth.signInWithPassword({
@@ -39,7 +107,8 @@ export function AuthForm() {
                 });
             }
         } catch (err: any) {
-            setError(err.message);
+            const translatedError = translateError(err.message);
+            setError(translatedError);
         } finally {
             setLoading(false);
         }
@@ -55,8 +124,14 @@ export function AuthForm() {
             });
             if (error) throw error;
         } catch (err: any) {
-            setError(err.message);
+            const translatedError = translateError(err.message);
+            setError(translatedError);
         }
+    }
+
+    // Si se debe mostrar el formulario de recuperar contraseña
+    if (showResetPassword) {
+        return <ResetPasswordForm onBack={() => setShowResetPassword(false)} />;
     }
 
     return (
@@ -142,8 +217,23 @@ export function AuthForm() {
                         </div>
 
                         {error && (
-                            <div className="bg-red-50 border border-red-200 rounded-xl p-3">
-                                <p className="text-sm text-red-600">{error}</p>
+                            <div 
+                                className="login-glass-effect border-red-300/50 login-hover-lift rounded-xl p-4 shadow-lg"
+                                style={{
+                                    background: "rgba(239, 68, 68, 0.15)",
+                                    backdropFilter: "blur(20px) saturate(150%)",
+                                    border: "1px solid rgba(239, 68, 68, 0.3)",
+                                    boxShadow: "0 8px 32px rgba(239, 68, 68, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3)"
+                                }}
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div className="flex-shrink-0 mt-0.5">
+                                        <svg className="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+                                    <p className="text-sm text-gray-800 font-medium leading-relaxed drop-shadow-sm">{error}</p>
+                                </div>
                             </div>
                         )}
 
@@ -184,6 +274,7 @@ export function AuthForm() {
                         <div className="text-center mt-4">
                             <button
                                 type="button"
+                                onClick={() => setShowResetPassword(true)}
                                 className="text-sm text-gray-700/70 hover:text-gray-700 font-sans transition-colors"
                             >
                                 ¿Olvidaste tu contraseña?
