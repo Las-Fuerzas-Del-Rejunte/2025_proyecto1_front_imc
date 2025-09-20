@@ -11,7 +11,6 @@ import {
   Legend,
   PieChart,
   Pie,
-  PieLabelRenderProps,
   Cell,
 } from "recharts";
 import { api } from "../../lib/api";
@@ -40,7 +39,8 @@ const CATEGORY_COLORS = {
   Normal: "#8b5cf6",
   "Bajo peso": "#06b6d4",
   Sobrepeso: "#f59e0b",
-  Obesidad: "#ef4444",
+  Obeso: "#8b5cf6", // Púrpura para Obeso
+  Obesidad: "#8b5cf6", // Púrpura para Obesidad también
 };
 
 export function Dashboard() {
@@ -73,12 +73,27 @@ export function Dashboard() {
   const categoriaData = Object.values(
     data.reduce((acc, item) => {
       if (!acc[item.categoria]) {
-        acc[item.categoria] = { name: item.categoria, value: 0 };
+        acc[item.categoria] = { 
+          name: item.categoria, 
+          value: 0, 
+          imcSum: 0,
+          imcCount: 0
+        };
       }
       acc[item.categoria].value++;
+      acc[item.categoria].imcSum += item.resultado;
+      acc[item.categoria].imcCount++;
       return acc;
-    }, {} as Record<string, { name: string; value: number }>)
-  );
+    }, {} as Record<string, { name: string; value: number; imcSum: number; imcCount: number }>)
+  ).map(item => ({
+    ...item,
+    imcPromedio: item.imcSum / item.imcCount
+  }));
+
+  // Encontrar la categoría más frecuente
+  const categoriaMasFrecuente = categoriaData.length > 0 
+    ? categoriaData.reduce((max, current) => current.value > max.value ? current : max)
+    : null;
 
   return (
     <div className="grid gap-6 md:grid-cols-2 w-full">
@@ -200,6 +215,22 @@ export function Dashboard() {
             <PieChartIcon className="w-5 h-5" />
             Distribución por Categoría
           </CardTitle>
+          {categoriaData.length > 0 && (
+            <div className="flex gap-4 text-sm text-muted-foreground">
+              <span>
+                Categorías:{" "}
+                <span className="text-violet-400 font-medium">
+                  {categoriaData.length}
+                </span>
+              </span>
+              <span>
+                Más frecuente:{" "}
+                <span className="text-violet-400 font-medium">
+                  {categoriaMasFrecuente?.name}
+                </span>
+              </span>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="h-[400px] flex items-center justify-center">
           {loading ? (
@@ -216,10 +247,6 @@ export function Dashboard() {
                   outerRadius={100}
                   innerRadius={40}
                   paddingAngle={2}
-                  label={({ name, value, percent }: PieLabelRenderProps) =>
-                    (percent as number) > 0.05 ? `${name}: ${value}` : ""
-                  }
-                  labelLine={false}
                 >
                   {categoriaData.map((entry, index) => (
                     <Cell
@@ -233,8 +260,47 @@ export function Dashboard() {
                     />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1f2937",
+                    border: "1px solid #374151",
+                    borderRadius: "8px",
+                    color: "#f9fafb",
+                    padding: "12px",
+                  }}
+                  formatter={(value: number, name: string, props: any) => {
+                    const categoryColor = CATEGORY_COLORS[name as keyof typeof CATEGORY_COLORS] || "#8b5cf6";
+                    return [
+                      <div key="tooltip-content" className="space-y-2">
+                        <div className="font-semibold text-lg" style={{ color: categoryColor }}>
+                          {name}
+                        </div>
+                        <div className="text-sm space-y-1">
+                          <div className="text-gray-300">
+                            Registros: <span className="text-white">{value}</span>
+                          </div>
+                          <div className="text-gray-300">
+                            Porcentaje: <span style={{ color: categoryColor }}>
+                              {((value / data.length) * 100).toFixed(1)}%
+                            </span>
+                          </div>
+                          <div className="text-gray-300">
+                            IMC Promedio: <span style={{ color: "#06b6d4" }}>
+                              {props.payload.imcPromedio.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ];
+                  }}
+                />
+                <Legend 
+                  formatter={(value, entry) => (
+                    <span className="text-sm">
+                      {value} ({entry.payload?.value || 0})
+                    </span>
+                  )}
+                />
               </PieChart>
             </ResponsiveContainer>
           ) : (
