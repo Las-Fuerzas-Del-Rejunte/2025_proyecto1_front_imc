@@ -103,6 +103,7 @@ function ImcForm() {
       if (pesoValidation) setPesoError(pesoValidation);
       setResultado(null);
       setError("");
+      setLoading(false); // 🔑 RESETEA loading aunque no llames API
       return;
     }
 
