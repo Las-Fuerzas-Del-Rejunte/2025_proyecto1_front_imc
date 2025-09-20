@@ -1,7 +1,7 @@
 import { Info, LogOut, BarChart3, Calculator, Menu, ChevronDown, User } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../hooks/useAuth";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 
 interface NavbarProps {
