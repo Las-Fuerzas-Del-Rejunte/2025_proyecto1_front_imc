@@ -309,10 +309,6 @@ function ImcForm() {
               )}
             </div>
 
-            {/* Botón adicional para abrir historial en pantallas pequeñas */}
-            <div className="flex items-center justify-center md:justify-end">
-              <Button onClick={() => setHistoryOpen(true)} className="md:hidden w-full">Ver historial</Button>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -385,14 +381,14 @@ function ImcForm() {
           </form>
 
           <div className="mt-2 overflow-auto max-h-[60vh]">
-            <div className="overflow-hidden rounded-md border">
+            <div className="overflow-x-auto overflow-hidden rounded-md border">
               {loadingHistorial ? (
                 <div className="space-y-3">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Skeleton key={i} className="h-6 w-full" />
                   ))}
                 </div>
-              ) : (<table className="min-w-full text-sm">
+              ) : (<table className="min-w-full text-sm" style={{minWidth: '600px'}}>
                 <thead className="bg-muted sticky top-0 z-10">
                   <tr>
                     <th className="px-3 py-2 text-left font-medium">Fecha</th>
