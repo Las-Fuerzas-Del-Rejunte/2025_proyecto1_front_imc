@@ -29,6 +29,7 @@ interface ImcResult {
 // const rawApiUrl = import.meta.env.VITE_API_URL as string | undefined;
 // const API_URL = (rawApiUrl ?? "").replace(/\/+$/, "");
 import { API_URL } from "..//config";
+import { api } from "./lib/api";
 
 function ImcForm() {
   const [altura, setAltura] = useState("");
@@ -84,15 +85,12 @@ function ImcForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Limpiar errores previos
     setAlturaError("");
     setPesoError("");
 
-    const alturaNum = parseFloat(altura.replace(',', '.'));
-    const pesoNum = parseFloat(peso.replace(',', '.'));
+    const alturaNum = parseFloat(altura.replace(",", "."));
+    const pesoNum = parseFloat(peso.replace(",", "."));
 
-    // Validaciones con funciones de "Validators"
     const alturaValidation = validateAltura(alturaNum);
     const pesoValidation = validatePeso(pesoNum);
 
@@ -105,13 +103,13 @@ function ImcForm() {
     }
 
     try {
-      const response = await axios.post(`${API_URL}/imc/calcular`, {
+      const response = await api.post("/imc/calcular", {
         altura: alturaNum,
         peso: pesoNum,
       });
       setResultado(response.data);
       setError("");
-    } catch (err) {
+    } catch (err: any) {
       setError("Error al calcular el IMC. Verifica si el backend está corriendo.");
       setResultado(null);
     }
@@ -121,16 +119,17 @@ function ImcForm() {
   useEffect(() => {
     const fetchHistorial = async () => {
       try {
-        let url = `${API_URL}/imc/historial`;
+        let url = "/imc/historial";
         if (fechaDesde || fechaHasta) {
           const params = [];
           if (fechaDesde) params.push(`desde=${fechaDesde}`);
           if (fechaHasta) params.push(`hasta=${fechaHasta}`);
           url += "?" + params.join("&");
         }
-        const response = await axios.get(url);
+        const response = await api.get(url); // usa api en lugar de axios
         const ordenados = response.data.sort(
-          (a: ImcResult, b: ImcResult) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          (a: ImcResult, b: ImcResult) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
         setHistorial(ordenados);
       } catch {
@@ -424,27 +423,27 @@ function ImcForm() {
                     <th className="px-3 py-2 text-left font-medium">Categoría</th>
                   </tr>
                 </thead>
-              <tbody>
-                {registrosPagina.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="text-center px-3 py-6 text-muted-foreground">
-                      Sin registros
-                    </td>
-                  </tr>
-                ) : (
-                  registrosPagina.map(item => (
-                    <tr key={item.id} className="border-t historial-table-row">
-                      <td className="px-3 py-2 whitespace-nowrap min-w-[120px]">{new Date(item.createdAt).toLocaleDateString()}</td>
-                      <td className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.peso}</td>
-                      <td className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.altura}</td>
-                      <td className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.resultado.toFixed(2)}</td>
-                      <td className="px-3 py-2 whitespace-nowrap min-w-[100px]">{item.categoria}</td>
+                <tbody>
+                  {registrosPagina.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="text-center px-3 py-6 text-muted-foreground">
+                        Sin registros
+                      </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-              <tfoot></tfoot>
-            </table>
+                  ) : (
+                    registrosPagina.map(item => (
+                      <tr key={item.id} className="border-t historial-table-row">
+                        <td className="px-3 py-2 whitespace-nowrap min-w-[120px]">{new Date(item.createdAt).toLocaleDateString()}</td>
+                        <td className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.peso}</td>
+                        <td className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.altura}</td>
+                        <td className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.resultado.toFixed(2)}</td>
+                        <td className="px-3 py-2 whitespace-nowrap min-w-[100px]">{item.categoria}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                <tfoot></tfoot>
+              </table>
             </div>
           </div>
 
