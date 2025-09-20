@@ -1,4 +1,3 @@
-import axios from "axios";
 import React, { useEffect, useState } from "react";
 import GaugeComponent from "react-gauge-component";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
@@ -13,6 +12,8 @@ import { Calendar as CalendarIcon, X, ArrowUpDown } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Gauge as GaugeIcon, AlertTriangle } from "lucide-react";
 import { validateAltura, validatePeso } from "./util/validators";
+import { Loader2 } from "lucide-react";
+
 
 
 interface ImcResult {
@@ -28,8 +29,8 @@ interface ImcResult {
 
 // const rawApiUrl = import.meta.env.VITE_API_URL as string | undefined;
 // const API_URL = (rawApiUrl ?? "").replace(/\/+$/, "");
-import { API_URL } from "..//config";
 import { api } from "./lib/api";
+import { Skeleton } from "./components/ui/Skeleton";
 
 function ImcForm() {
   const [altura, setAltura] = useState("");
@@ -53,6 +54,8 @@ function ImcForm() {
   const [range, setRange] = useState<DateRange | undefined>(undefined);
   const [sortKey, setSortKey] = useState<"peso" | "altura" | "resultado" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [loading, setLoading] = useState(false);
+  const [loadingHistorial, setLoadingHistorial] = useState(false);
 
   // Función para limitar a 2 decimales
   const limitToTwoDecimals = (value: string): string => {
@@ -87,6 +90,7 @@ function ImcForm() {
     e.preventDefault();
     setAlturaError("");
     setPesoError("");
+    setLoading(true);
 
     const alturaNum = parseFloat(altura.replace(",", "."));
     const pesoNum = parseFloat(peso.replace(",", "."));
@@ -112,21 +116,23 @@ function ImcForm() {
     } catch (err: any) {
       setError("Error al calcular el IMC. Verifica si el backend está corriendo.");
       setResultado(null);
+    } finally {
+      setLoading(false);
     }
   };
 
   // Obtener historial solo cuando cambian los filtros aplicados
   useEffect(() => {
     const fetchHistorial = async () => {
+      setLoadingHistorial(true);
       try {
         let url = "/imc/historial";
-        if (fechaDesde || fechaHasta) {
-          const params = [];
-          if (fechaDesde) params.push(`desde=${fechaDesde}`);
-          if (fechaHasta) params.push(`hasta=${fechaHasta}`);
-          url += "?" + params.join("&");
-        }
-        const response = await api.get(url); // usa api en lugar de axios
+        const params = [];
+        if (fechaDesde) params.push(`desde=${fechaDesde}`);
+        if (fechaHasta) params.push(`hasta=${fechaHasta}`);
+        if (params.length) url += "?" + params.join("&");
+
+        const response = await api.get(url);
         const ordenados = response.data.sort(
           (a: ImcResult, b: ImcResult) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -134,6 +140,8 @@ function ImcForm() {
         setHistorial(ordenados);
       } catch {
         setHistorial([]);
+      } finally {
+        setLoadingHistorial(false);
       }
     };
     fetchHistorial();
@@ -240,8 +248,10 @@ function ImcForm() {
                   </div>
                 )}
               </div>
-              <Button type="submit" className="w-full text-base h-11 text-white">Calcular</Button>
-
+              <Button type="submit" className="w-full text-base h-11 text-white" disabled={loading}>
+                {loading && <Loader2 className="animate-spin h-4 w-4 mr-2" />}
+                {loading ? "Calculando..." : "Calcular"}
+              </Button>
               {error && (
                 <Alert className="border-destructive/50 bg-destructive/10">
                   <div className="flex items-start gap-2">
@@ -374,7 +384,13 @@ function ImcForm() {
 
           <div className="mt-2 overflow-auto max-h-[60vh]">
             <div className="overflow-hidden rounded-md border">
-              <table className="min-w-full text-sm">
+              {loadingHistorial ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-6 w-full" />
+                  ))}
+                </div>
+              ) : (<table className="min-w-full text-sm">
                 <thead className="bg-muted sticky top-0 z-10">
                   <tr>
                     <th className="px-3 py-2 text-left font-medium">Fecha</th>
@@ -443,7 +459,7 @@ function ImcForm() {
                   )}
                 </tbody>
                 <tfoot></tfoot>
-              </table>
+              </table>)}
             </div>
           </div>
 

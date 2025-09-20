@@ -27,6 +27,8 @@
     "react-day-picker": "^9.10.0",
     "react-dom": "^18.2.0",
     "react-gauge-component": "^1.2.64",
+    "react-router-dom": "^7.9.1",
+    "recharts": "^3.2.1",
     "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
