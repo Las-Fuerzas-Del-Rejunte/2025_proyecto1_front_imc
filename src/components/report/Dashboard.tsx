@@ -148,7 +148,7 @@ export function Dashboard() {
                   outerRadius={120}
                   label
                 >
-                  {categoriaData.map((entry, index) => (
+                  {categoriaData.map((_, index) => (
                     <Cell key={index} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
