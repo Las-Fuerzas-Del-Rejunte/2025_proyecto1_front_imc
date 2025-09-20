@@ -1,4 +1,3 @@
-import axios from "axios";
 import React, { useEffect, useState } from "react";
 import GaugeComponent from "react-gauge-component";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
@@ -13,6 +12,8 @@ import { Calendar as CalendarIcon, X, ArrowUpDown } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Gauge as GaugeIcon, AlertTriangle } from "lucide-react";
 import { validateAltura, validatePeso } from "./util/validators";
+import { Loader2 } from "lucide-react";
+
 
 
 interface ImcResult {
@@ -28,7 +29,8 @@ interface ImcResult {
 
 // const rawApiUrl = import.meta.env.VITE_API_URL as string | undefined;
 // const API_URL = (rawApiUrl ?? "").replace(/\/+$/, "");
-import { API_URL } from "..//config";
+import { api } from "./lib/api";
+import { Skeleton } from "./components/ui/Skeleton";
 
 function ImcForm() {
   const [altura, setAltura] = useState("");
@@ -52,6 +54,8 @@ function ImcForm() {
   const [range, setRange] = useState<DateRange | undefined>(undefined);
   const [sortKey, setSortKey] = useState<"peso" | "altura" | "resultado" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [loading, setLoading] = useState(false);
+  const [loadingHistorial, setLoadingHistorial] = useState(false);
 
   // Función para limitar a 2 decimales
   const limitToTwoDecimals = (value: string): string => {
@@ -84,15 +88,13 @@ function ImcForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Limpiar errores previos
     setAlturaError("");
     setPesoError("");
+    setLoading(true);
 
-    const alturaNum = parseFloat(altura.replace(',', '.'));
-    const pesoNum = parseFloat(peso.replace(',', '.'));
+    const alturaNum = parseFloat(altura.replace(",", "."));
+    const pesoNum = parseFloat(peso.replace(",", "."));
 
-    // Validaciones con funciones de "Validators"
     const alturaValidation = validateAltura(alturaNum);
     const pesoValidation = validatePeso(pesoNum);
 
@@ -105,36 +107,41 @@ function ImcForm() {
     }
 
     try {
-      const response = await axios.post(`${API_URL}/imc/calcular`, {
+      const response = await api.post("/imc/calcular", {
         altura: alturaNum,
         peso: pesoNum,
       });
       setResultado(response.data);
       setError("");
-    } catch (err) {
+    } catch (err: any) {
       setError("Error al calcular el IMC. Verifica si el backend está corriendo.");
       setResultado(null);
+    } finally {
+      setLoading(false);
     }
   };
 
   // Obtener historial solo cuando cambian los filtros aplicados
   useEffect(() => {
     const fetchHistorial = async () => {
+      setLoadingHistorial(true);
       try {
-        let url = `${API_URL}/imc/historial`;
-        if (fechaDesde || fechaHasta) {
-          const params = [];
-          if (fechaDesde) params.push(`desde=${fechaDesde}`);
-          if (fechaHasta) params.push(`hasta=${fechaHasta}`);
-          url += "?" + params.join("&");
-        }
-        const response = await axios.get(url);
+        let url = "/imc/historial";
+        const params = [];
+        if (fechaDesde) params.push(`desde=${fechaDesde}`);
+        if (fechaHasta) params.push(`hasta=${fechaHasta}`);
+        if (params.length) url += "?" + params.join("&");
+
+        const response = await api.get(url);
         const ordenados = response.data.sort(
-          (a: ImcResult, b: ImcResult) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          (a: ImcResult, b: ImcResult) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
         setHistorial(ordenados);
       } catch {
         setHistorial([]);
+      } finally {
+        setLoadingHistorial(false);
       }
     };
     fetchHistorial();
@@ -241,8 +248,10 @@ function ImcForm() {
                   </div>
                 )}
               </div>
-              <Button type="submit" className="w-full text-base h-11 text-white">Calcular</Button>
-
+              <Button type="submit" className="w-full text-base h-11 text-white" disabled={loading}>
+                {loading && <Loader2 className="animate-spin h-4 w-4 mr-2" />}
+                {loading ? "Calculando..." : "Calcular"}
+              </Button>
               {error && (
                 <Alert className="border-destructive/50 bg-destructive/10">
                   <div className="flex items-start gap-2">
@@ -376,7 +385,13 @@ function ImcForm() {
 
           <div className="mt-2 overflow-auto max-h-[60vh]">
             <div className="overflow-hidden rounded-md border">
-              <table className="min-w-full text-sm">
+              {loadingHistorial ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-6 w-full" />
+                  ))}
+                </div>
+              ) : (<table className="min-w-full text-sm">
                 <thead className="bg-muted sticky top-0 z-10">
                   <tr>
                     <th className="px-3 py-2 text-left font-medium">Fecha</th>
@@ -426,27 +441,27 @@ function ImcForm() {
                     <th className="px-3 py-2 text-left font-medium">Categoría</th>
                   </tr>
                 </thead>
-              <tbody>
-                {registrosPagina.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="text-center px-3 py-6 text-muted-foreground">
-                      Sin registros
-                    </td>
-                  </tr>
-                ) : (
-                  registrosPagina.map(item => (
-                    <tr key={item.id} className="border-t historial-table-row">
-                      <td className="px-3 py-2 whitespace-nowrap min-w-[120px]">{new Date(item.createdAt).toLocaleDateString()}</td>
-                      <td className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.peso}</td>
-                      <td className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.altura}</td>
-                      <td className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.resultado.toFixed(2)}</td>
-                      <td className="px-3 py-2 whitespace-nowrap min-w-[100px]">{item.categoria}</td>
+                <tbody>
+                  {registrosPagina.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="text-center px-3 py-6 text-muted-foreground">
+                        Sin registros
+                      </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-              <tfoot></tfoot>
-            </table>
+                  ) : (
+                    registrosPagina.map(item => (
+                      <tr key={item.id} className="border-t historial-table-row">
+                        <td className="px-3 py-2 whitespace-nowrap min-w-[120px]">{new Date(item.createdAt).toLocaleDateString()}</td>
+                        <td className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.peso}</td>
+                        <td className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.altura}</td>
+                        <td className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.resultado.toFixed(2)}</td>
+                        <td className="px-3 py-2 whitespace-nowrap min-w-[100px]">{item.categoria}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                <tfoot></tfoot>
+              </table>)}
             </div>
           </div>
 
