@@ -11,7 +11,25 @@ import { Toaster } from './components/ui/toaster';
 
 function App() {
   const { user, loading } = useAuth();
-  const [open, setOpen] = React.useState(true);
+  const [open, setOpen] = React.useState(false);
+  const [hasSeenWelcome, setHasSeenWelcome] = React.useState(false);
+
+  // Verificar si el usuario ya ha visto el modal de bienvenida
+  React.useEffect(() => {
+    const seenWelcome = localStorage.getItem('hasSeenWelcome');
+    if (!seenWelcome && user) {
+      setOpen(true);
+      setHasSeenWelcome(true);
+    }
+  }, [user]);
+
+  // Función para manejar el cierre del modal
+  const handleWelcomeClose = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen && hasSeenWelcome) {
+      localStorage.setItem('hasSeenWelcome', 'true');
+    }
+  };
 
   if (loading) {
     return (
@@ -70,7 +88,7 @@ function App() {
           </main>
 
           <Footer />
-          <WelcomeModal open={open} onOpenChange={setOpen} />
+          <WelcomeModal open={open} onOpenChange={handleWelcomeClose} />
         </div>
       )}
       <Toaster />
