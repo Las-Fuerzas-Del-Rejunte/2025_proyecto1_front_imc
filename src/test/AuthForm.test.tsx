@@ -21,7 +21,7 @@ jest.mock("../lib/supabase", () => ({
 }));
 
 // ---------------------------
-describe("AuthForm", () => {
+describe("Prubas de AuthForm", () => {
   // Limpiar todos los mocks antes de cada test
   beforeEach(() => {
     jest.clearAllMocks();

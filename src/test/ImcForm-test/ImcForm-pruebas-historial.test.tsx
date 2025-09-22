@@ -66,7 +66,7 @@ const abrirModal = async (historialMock: HistorialItem[]) => {
   });
 };
 
-describe("ImcForm - integración", () => {
+describe("ImcForm - Pruebas de Historial de Resultados", () => {
   // Limpiamos todos los mocks antes de cada test
   beforeEach(() => {
     jest.clearAllMocks();
