@@ -13,7 +13,7 @@ import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Gauge as GaugeIcon, AlertTriangle } from "lucide-react";
 import { validateAltura, validatePeso } from "./util/validators";
 import { Loader2 } from "lucide-react";
-
+import { limitToTwoDecimals } from "./util/limitToTwoDecimals";
 
 
 interface ImcResult {
@@ -58,21 +58,21 @@ function ImcForm() {
   const [loadingHistorial, setLoadingHistorial] = useState(false);
 
   // Función para limitar a 2 decimales
-  const limitToTwoDecimals = (value: string): string => {
-    // Permitir coma o punto como separador decimal
-    const normalizedValue = value.replace(',', '.');
+  // const limitToTwoDecimals = (value: string): string => {
+  //   // Permitir coma o punto como separador decimal
+  //   const normalizedValue = value.replace(',', '.');
 
-    // Validar con regex: número opcional con hasta 2 decimales
-    const regex = /^\d*\.?\d{0,2}$/;
+  //   // Validar con regex: número opcional con hasta 2 decimales
+  //   const regex = /^\d*\.?\d{0,2}$/;
 
-    if (regex.test(normalizedValue)) {
-      return value; // Mantener el formato original (coma o punto)
-    }
+  //   if (regex.test(normalizedValue)) {
+  //     return value; // Mantener el formato original (coma o punto)
+  //   }
 
-    // Si no cumple, recortar a 2 decimales
-    const match = normalizedValue.match(/^(\d*\.?\d{0,2})/);
-    return match ? match[1].replace('.', value.includes(',') ? ',' : '.') : value;
-  };
+  //   // Si no cumple, recortar a 2 decimales
+  //   const match = normalizedValue.match(/^(\d*\.?\d{0,2})/);
+  //   return match ? match[1].replace('.', value.includes(',') ? ',' : '.') : value;
+  // };
 
   const handleAlturaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const limitedValue = limitToTwoDecimals(e.target.value);
@@ -217,7 +217,7 @@ function ImcForm() {
                   aria-describedby={alturaError ? "altura-error" : undefined}
                   className={alturaError ? "border-destructive focus-visible:ring-destructive" : undefined}
                 />
-                <p className="text-xs text-muted-foreground">Rango permitido: 0.10 m a 3.00 m</p>
+                <p data-testid="rangoPermitidoAltura" className="text-xs text-muted-foreground">Rango permitido: 0.10 m a 3.00 m</p>
                 {alturaError && (
                   <div id="altura-error" className="mt-1 flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive shadow-sm ring-1 ring-destructive/20">
                     <AlertTriangle className="h-4 w-4" />
@@ -249,7 +249,7 @@ function ImcForm() {
                   </div>
                 )}
               </div>
-              <Button type="submit" className="w-full text-base h-11 text-white" disabled={loading}>
+              <Button data-testid="btn-calcular" type="submit" className="w-full text-base h-11 text-white" disabled={loading}>
                 {loading && <Loader2 className="animate-spin h-4 w-4 mr-2" />}
                 {loading ? "Calculando..." : "Calcular"}
               </Button>
@@ -340,7 +340,7 @@ function ImcForm() {
               <Label className="text-xs">Rango de fechas</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between hover:bg-violet-500/20">
+                  <Button data-testid="lblRangoFechas" variant="outline" className="w-full justify-between hover:bg-violet-500/20">
                     {fechaDesdeInput || fechaHastaInput
                       ? `${fechaDesdeInput ? new Date(fechaDesdeInput).toLocaleDateString() : ""}${fechaHastaInput ? ' - ' + new Date(fechaHastaInput).toLocaleDateString() : ''}`
                       : "dd/mm/aaaa - dd/mm/aaaa"}
@@ -449,10 +449,10 @@ function ImcForm() {
                     registrosPagina.map(item => (
                       <tr key={item.id} className="border-t historial-table-row">
                         <td className="px-3 py-2 whitespace-nowrap min-w-[120px]">{new Date(item.createdAt).toLocaleDateString()}</td>
-                        <td className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.peso}</td>
+                        <td data-testid={`peso-${item.id}`} className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.peso}</td>
                         <td className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.altura}</td>
                         <td className="px-3 py-2 whitespace-nowrap min-w-[80px]">{item.resultado.toFixed(2)}</td>
-                        <td className="px-3 py-2 whitespace-nowrap min-w-[100px]">{item.categoria}</td>
+                        <td data-testid={`categoria-${item.id}`} className="px-3 py-2 whitespace-nowrap min-w-[100px]">{item.categoria}</td>
                       </tr>
                     ))
                   )}
@@ -464,6 +464,7 @@ function ImcForm() {
 
           <div className="mt-4 flex items-center justify-center gap-3">
             <Button
+              data-testid="btn-anterior"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(currentPage - 1)}
               className="px-4 text-white"
@@ -472,6 +473,7 @@ function ImcForm() {
             </Button>
             <span className="text-sm">Página {currentPage} de {totalPaginas || 1}</span>
             <Button
+              data-testid="btn-siguiente"
               disabled={currentPage === totalPaginas || totalPaginas === 0}
               onClick={() => setCurrentPage(currentPage + 1)}
               className="px-4 text-white"

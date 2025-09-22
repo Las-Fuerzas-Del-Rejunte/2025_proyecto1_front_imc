@@ -1,7 +1,7 @@
 // import { describe, expect, test } from "@jest/globals";
 import { describe, expect} from "@jest/globals";
 
-describe("limitToTwoDecimals", () => {
+describe("Funcion limitToTwoDecimals test", () => {
   
   // Llamamos a la funcion que delimita a dos decimales
   const limitToTwoDecimals = (value: string): string => {

@@ -203,6 +203,7 @@ export function AuthForm() {
                                     required
                                 />
                                 <button
+                                    data-testid ='mostrarContrasena'
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
                                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
@@ -273,6 +274,7 @@ export function AuthForm() {
                     {mode === "login" && (
                         <div className="text-center mt-4">
                             <button
+                                data-testid = 'recuperarContrasena'
                                 type="button"
                                 onClick={() => setShowResetPassword(true)}
                                 className="text-sm text-gray-700/70 hover:text-gray-700 font-sans transition-colors"

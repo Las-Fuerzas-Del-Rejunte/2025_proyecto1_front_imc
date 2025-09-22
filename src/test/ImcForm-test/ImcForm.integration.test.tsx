@@ -1,6 +1,6 @@
 import { render, screen, fireEvent} from "@testing-library/react";
 import "@testing-library/jest-dom";
-import ImcForm from "../ImcForm";
+import ImcForm from "../../ImcForm";
 import axios from "axios";
 
 
@@ -10,9 +10,34 @@ jest.mock("react-gauge-component", () => {
 });
 
 // Mock de la configuración de la API
-jest.mock("../../config", () => ({
+jest.mock("../../../config", () => ({
   API_URL: "http://localhost:3000", // valor fake para pruebas en localhost
 }));
+
+
+//Mock de supabase
+jest.mock("../../lib/supabase", () => ({
+  supabase: {
+    auth: {
+      signInWithPassword: jest.fn(),
+      signUp: jest.fn(),
+      signInWithOAuth: jest.fn(),
+    },
+  },
+}));
+
+//Mock de la Api
+jest.mock("../../lib/api", () => ({
+  api: {
+    interceptors: { request: { use: jest.fn() } },
+    get: jest.fn(),
+    post: jest.fn(),
+    put: jest.fn(),
+    delete: jest.fn(),
+  },
+}));
+
+
 
 // Mock de Axios para simular llamadas HTTP
 jest.mock("axios"); 
